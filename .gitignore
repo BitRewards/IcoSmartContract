@@ -24,6 +24,8 @@ var/
 .installed.cfg
 *.egg
 
+.vscode
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -74,7 +76,6 @@ registrar.json
 *.ipynb
 
 # Crowdsale definitions
-crowdsales/*.yml
 *.csv
 
 # Customer test cases

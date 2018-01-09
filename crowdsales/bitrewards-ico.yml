@@ -1,0 +1,80 @@
+kovan:
+    chain: kovan
+    verify_on_etherscan: yes
+    browser_driver: chrome
+    solc:
+        version: v0.4.14+commit.c2215d46
+        optimizations:
+            optimizer: true
+            runs: 500
+    contracts:
+        team_multisig:
+            contract_name: MultiSigWallet
+            contract_file: GnosisWallet.sol
+            address: "0x8a5036176f957af5ad802fb33e218cab00fc98ac"
+        token:
+            contract_name: CrowdsaleToken
+            contract_file: CrowdsaleToken.sol
+            arguments:
+                _name: "BitReward"
+                _symbol: "BIT"
+                _initialSupply: 0
+                _decimals: 18
+                _mintable: true
+        pricing_strategy:
+            contract_name: MilestonePricing
+            contract_file: MilestonePricing.sol
+            arguments:
+                _preicoPrice: "{{ to_wei('0.000021', 'ether') }}"
+                _preicoContractAddress: "{{contracts.preico.address}}"
+                _milestones:
+                    - 40000000
+                    - "{{ to_wei('0.0000225', 'ether') }}"
+                    - 140000000
+                    - "{{ to_wei('0.000024', 'ether') }}"
+                    - 290000000
+                    - "{{ to_wei('0.0000255', 'ether') }}"
+                    - 440000000
+                    - "{{ to_wei('0.000027', 'ether') }}"
+                    - 790000000
+                    - "{{ to_wei('0.0000285', 'ether') }}"
+                    - 1040000000
+                    - "{{ to_wei('0.00003', 'ether') }}"
+        crowdsale:
+            contract_name: MintedTokenCappedCrowdsale
+            contract_file: MintedTokenCappedCrowdsale.sol
+            arguments:
+                _token: "{{contracts.token.address}}"
+                _pricingStrategy: "{{contracts.pricing_strategy.address}}"
+                _multisigWallet: "{{contracts.team_multisig.address}}"
+                _start: "{{ timestamp(datetime(2017, 12, 21, 16, 0)) }}"
+                _end: "{{ timestamp(datetime(2017, 12, 21, 16, 0)) + 30*24*3600 }}"
+                _minimumFundingGoal: 40000000
+                _maximumSellableTokens: 1040000000
+        finalize_agent:
+            contract_name: NullFinalizeAgent
+            contract_file: NullFinalizeAgent.sol
+            arguments:
+                _crowdsale: "{{contracts.crowdsale.address}}"
+    post_actions: |
+        token.transact({"from": deploy_address}).approve(crowdsale.address, 70000000000*10**18)
+        token.transact({"from": deploy_address}).setTransferAgent(team_multisig.address, True)
+        token.transact({"from": deploy_address}).setTransferAgent(crowdsale.address, True)
+        token.transact({"from": deploy_address}).setTransferAgent(finalize_agent.address, True)
+        token.transact({"from": deploy_address}).setTransferAgent(deploy_address, True)
+        confirm_tx(crowdsale.transact({"from": deploy_address}).setFinalizeAgent(finalize_agent.address))
+        confirm_tx(token.transact({"from": deploy_address}).setReleaseAgent(deploy_address))
+        confirm_tx(token.transact({"from": deploy_address}).setUpgradeMaster(team_multisig.address))
+        confirm_multiple_txs( \
+          crowdsale.transact({"from": deploy_address}).setEarlyParicipantWhitelist(deploy_address, True), \
+          crowdsale.transact({"from": deploy_address}).setEarlyParicipantWhitelist("0x6d997eDcA04282950416FA380d834f360fC36eBb", True) \
+        )
+        confirm_tx(pricing_strategy.transact({"from": deploy_address}).setPreicoAddress("0x6d997eDcA04282950416FA380d834f360fC36eBb", 2083333333333))
+    verify_actions: |
+        assert token.call().owner().lower() == deploy_address.lower()
+        assert token.call().released() == False
+        assert crowdsale.call().owner().lower() == deploy_address.lower()
+        assert crowdsale.call().multisigWallet().lower() == team_multisig.address.lower()
+        assert finalize_agent.call().isSane()
+        assert crowdsale.call().getState() == CrowdsaleState.PreFunding
+        confirm_tx(crowdsale.transact({"from": deploy_address, "value": to_wei("0.01", "ether")}).buy())
