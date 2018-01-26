@@ -13,33 +13,14 @@ kovan:
             contract_file: GnosisWallet.sol
             address: "0x8a5036176f957af5ad802fb33e218cab00fc98ac"
         token:
-            contract_name: CrowdsaleToken
-            contract_file: CrowdsaleToken.sol
+            contract_name: BitrewardsToken
+            contract_file: BitrewardsToken.sol
             arguments:
                 _name: "BitReward"
                 _symbol: "BIT"
                 _initialSupply: 0
                 _decimals: 18
                 _mintable: true
-        pricing_strategy:
-            contract_name: MilestonePricing
-            contract_file: MilestonePricing.sol
-            arguments:
-                _preicoPrice: "{{ to_wei('0.000021', 'ether') }}"
-                _preicoContractAddress: "{{contracts.preico.address}}"
-                _milestones:
-                    - 40000000
-                    - "{{ to_wei('0.0000225', 'ether') }}"
-                    - 140000000
-                    - "{{ to_wei('0.000024', 'ether') }}"
-                    - 290000000
-                    - "{{ to_wei('0.0000255', 'ether') }}"
-                    - 440000000
-                    - "{{ to_wei('0.000027', 'ether') }}"
-                    - 790000000
-                    - "{{ to_wei('0.0000285', 'ether') }}"
-                    - 1040000000
-                    - "{{ to_wei('0.00003', 'ether') }}"
         crowdsale:
             contract_name: MintedTokenCappedCrowdsale
             contract_file: MintedTokenCappedCrowdsale.sol
@@ -47,8 +28,8 @@ kovan:
                 _token: "{{contracts.token.address}}"
                 _pricingStrategy: "{{contracts.pricing_strategy.address}}"
                 _multisigWallet: "{{contracts.team_multisig.address}}"
-                _start: "{{ timestamp(datetime(2017, 12, 21, 16, 0)) }}"
-                _end: "{{ timestamp(datetime(2017, 12, 21, 16, 0)) + 30*24*3600 }}"
+                _start: "{{ timestamp(datetime(2018, 3, 1, 0, 0)) }}"
+                _end: "{{ timestamp(datetime(2018, 5, 10, 0, 0)) }}"
                 _minimumFundingGoal: 40000000
                 _maximumSellableTokens: 1040000000
         finalize_agent:
@@ -57,7 +38,6 @@ kovan:
             arguments:
                 _crowdsale: "{{contracts.crowdsale.address}}"
     post_actions: |
-        token.transact({"from": deploy_address}).approve(crowdsale.address, 70000000000*10**18)
         token.transact({"from": deploy_address}).setTransferAgent(team_multisig.address, True)
         token.transact({"from": deploy_address}).setTransferAgent(crowdsale.address, True)
         token.transact({"from": deploy_address}).setTransferAgent(finalize_agent.address, True)
